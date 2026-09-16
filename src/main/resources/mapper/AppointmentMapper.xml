@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="io.github.decadedx.smarthealthcare.mapper.AppointmentMapper">
+
+    <!--
+        所有关联均为 LEFT JOIN：挂号单存在但关键关联缺失时仍返回一行，
+        由 Service 转换为数据完整性错误，而不是误报为挂号单不存在。
+    -->
+    <select id="findAppointmentDetailSource"
+            resultType="io.github.decadedx.smarthealthcare.mapper.AppointmentDetailSource">
+        SELECT a.id              AS appointment_id,
+               a.status          AS appointment_status,
+               p.id              AS patient_id,
+               p.real_name       AS patient_real_name,
+               s.id              AS schedule_id,
+               s.work_date       AS schedule_work_date,
+               s.time_slot       AS schedule_time_slot,
+               s.capacity        AS schedule_capacity,
+               d.id              AS doctor_id,
+               d.name            AS doctor_name,
+               d.title           AS doctor_title,
+               dept.id           AS department_id,
+               dept.name         AS department_name,
+               c.id              AS campus_id,
+               c.name            AS campus_name,
+               c.address         AS campus_address,
+               director.id       AS director_id,
+               director.name     AS director_name,
+               director.title    AS director_title,
+               mr.id             AS medical_record_id,
+               mr.diagnosis      AS medical_record_diagnosis,
+               mr.prescription   AS medical_record_prescription
+        FROM appointment a
+                 LEFT JOIN patient p ON p.id = a.patient_id
+                 LEFT JOIN schedule s ON s.id = a.schedule_id
+                 LEFT JOIN doctor d ON d.id = s.doctor_id
+                 LEFT JOIN department dept ON dept.id = d.dept_id
+                 LEFT JOIN campus c ON c.id = dept.campus_id
+                 LEFT JOIN doctor director ON director.id = dept.director_id
+                 LEFT JOIN medical_record mr ON mr.appointment_id = a.id
+        WHERE a.id = #{appointmentId}
+    </select>
+</mapper>

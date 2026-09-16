@@ -1,192 +1,203 @@
 package io.github.decadedx.smarthealthcare.service.impl;
 
+import com.baomidou.mybatisplus.spring.service.impl.ServiceImpl;
 import io.github.decadedx.smarthealthcare.entity.Appointment;
-import io.github.decadedx.smarthealthcare.entity.Campus;
-import io.github.decadedx.smarthealthcare.entity.Department;
-import io.github.decadedx.smarthealthcare.entity.Doctor;
-import io.github.decadedx.smarthealthcare.entity.MedicalRecord;
-import io.github.decadedx.smarthealthcare.entity.Patient;
-import io.github.decadedx.smarthealthcare.entity.Schedule;
 import io.github.decadedx.smarthealthcare.enums.AppointmentStatus;
 import io.github.decadedx.smarthealthcare.exception.BusinessException;
+import io.github.decadedx.smarthealthcare.mapper.AppointmentDetailSource;
 import io.github.decadedx.smarthealthcare.mapper.AppointmentMapper;
-import io.github.decadedx.smarthealthcare.mapper.CampusMapper;
-import io.github.decadedx.smarthealthcare.mapper.DepartmentMapper;
-import io.github.decadedx.smarthealthcare.mapper.DoctorMapper;
-import io.github.decadedx.smarthealthcare.mapper.MedicalRecordMapper;
-import io.github.decadedx.smarthealthcare.mapper.PatientMapper;
-import io.github.decadedx.smarthealthcare.mapper.ScheduleMapper;
-import io.github.decadedx.smarthealthcare.vo.AppointmentDetailVO;
 import io.github.decadedx.smarthealthcare.service.AppointmentService;
-import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
-import com.baomidou.mybatisplus.spring.service.impl.ServiceImpl;
-import java.time.ZoneId;
-
+import io.github.decadedx.smarthealthcare.vo.AppointmentDetailVO;
 import io.github.decadedx.smarthealthcare.vo.DoctorSummaryVO;
+import java.util.List;
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 
 /**
-* @author 86183
-* @description 针对表【appointment】的数据库操作Service实现
-* @createDate 2026-09-15 21:18:28
-*/
+ * 负责一次联合查询挂号详情，并组装不含反向关联的患者端响应树。
+ */
 @Service
 public class AppointmentServiceImpl extends ServiceImpl<AppointmentMapper, Appointment> implements AppointmentService {
 
-    /** 患者数据访问对象。 */
-    private final PatientMapper patientMapper;
-
-    /** 排班数据访问对象。 */
-    private final ScheduleMapper scheduleMapper;
-
-    /** 医生数据访问对象。 */
-    private final DoctorMapper doctorMapper;
-
-    /** 科室数据访问对象。 */
-    private final DepartmentMapper departmentMapper;
-
-    /** 院区数据访问对象。 */
-    private final CampusMapper campusMapper;
-
-    /** 病历数据访问对象。 */
-    private final MedicalRecordMapper medicalRecordMapper;
-
     /**
-     * 注入构造挂号详情所需的关联表 Mapper。
-     *
-     * @param patientMapper 患者 Mapper
-     * @param scheduleMapper 排班 Mapper
-     * @param doctorMapper 医生 Mapper
-     * @param departmentMapper 科室 Mapper
-     * @param campusMapper 院区 Mapper
-     * @param medicalRecordMapper 病历 Mapper
-     */
-    public AppointmentServiceImpl(PatientMapper patientMapper, ScheduleMapper scheduleMapper,
-                                  DoctorMapper doctorMapper, DepartmentMapper departmentMapper,
-                                  CampusMapper campusMapper, MedicalRecordMapper medicalRecordMapper) {
-        this.patientMapper = patientMapper;
-        this.scheduleMapper = scheduleMapper;
-        this.doctorMapper = doctorMapper;
-        this.departmentMapper = departmentMapper;
-        this.campusMapper = campusMapper;
-        this.medicalRecordMapper = medicalRecordMapper;
-    }
-
-    /**
-     * 查询挂号单及其必要关联数据，并组装不含反向关系的详情响应。
+     * 查询挂号单详情；所有关键关联（含科室主任）必须存在，病历允许为空。
      *
      * @param appointmentId 挂号单主键
-     * @return 挂号单详情
-     * @throws BusinessException 挂号单不存在、状态非法或关键关联（含科室主任）缺失时抛出
+     * @return 有限层级的挂号详情
+     * @throws BusinessException 挂号单不存在、状态非法、病历基数异常或关键关联缺失时抛出
      */
     @Override
     public AppointmentDetailVO getDetail(Integer appointmentId) {
-        Appointment appointment = getById(appointmentId);
-        if (appointment == null) {
-            throw new BusinessException(org.springframework.http.HttpStatus.NOT_FOUND,
-                    "APPOINTMENT_NOT_FOUND", "挂号单不存在");
+        List<AppointmentDetailSource> sources = baseMapper.findAppointmentDetailSource(appointmentId);
+        if (sources.isEmpty()) {
+            throw new BusinessException(HttpStatus.NOT_FOUND, "APPOINTMENT_NOT_FOUND", "挂号单不存在");
         }
-        if (!AppointmentStatus.isSupported(appointment.getStatus())) {
-            throw new BusinessException(org.springframework.http.HttpStatus.INTERNAL_SERVER_ERROR,
-                    "DATA_INTEGRITY_ERROR", "挂号单状态数据不合法");
+        if (sources.size() > 1) {
+            throw new BusinessException(HttpStatus.INTERNAL_SERVER_ERROR,
+                    "DATA_INTEGRITY_ERROR", "同一挂号单存在多条病历");
         }
 
-        Patient patient = requireEntity(patientMapper.selectById(appointment.getPatientId()), "患者");
-        Schedule schedule = requireEntity(scheduleMapper.selectById(appointment.getScheduleId()), "排班");
-        Doctor doctor = requireEntity(doctorMapper.selectById(schedule.getDoctorId()), "医生");
-        Department department = requireEntity(departmentMapper.selectById(doctor.getDeptId()), "科室");
-        Campus campus = requireEntity(campusMapper.selectById(department.getCampusId()), "院区");
-        Doctor director = requireEntity(
-                department.getDirectorId() == null ? null : doctorMapper.selectById(department.getDirectorId()),
-                "科室主任");
-        MedicalRecord medicalRecord = medicalRecordMapper.selectList(new LambdaQueryWrapper<MedicalRecord>()
-                .eq(MedicalRecord::getAppointmentId, appointmentId)
-                .orderByAsc(MedicalRecord::getId))
-            .stream()
-            .findFirst()
-            .orElse(null);
-
-        return toDetailSource(appointment, patient, schedule, doctor, department, campus, director, medicalRecord);
+        AppointmentDetailSource source = sources.get(0);
+        validateSource(source);
+        return toDetailVO(source);
     }
 
     /**
-     * 校验查询出的关键关联实体存在。
+     * 校验联合查询中不可为空的业务关联，避免以空对象掩盖脏数据。
      *
-     * @param entity 关联查询结果
-     * @param entityName 实体业务名称
-     * @param <T> 实体类型
-     * @return 已确认非空的实体
+     * @param source 联合查询结果
      */
-    private <T> T requireEntity(T entity, String entityName) {
-        if (entity == null) {
-            throw new BusinessException(org.springframework.http.HttpStatus.INTERNAL_SERVER_ERROR,
-                    "DATA_INTEGRITY_ERROR", "挂号单关联的" + entityName + "不存在");
+    private void validateSource(AppointmentDetailSource source) {
+        if (!AppointmentStatus.isSupported(source.getAppointmentStatus())) {
+            throw dataIntegrityError("挂号单状态数据不合法");
         }
-        return entity;
+        requireValue(source.getPatientId(), "患者");
+        requireValue(source.getScheduleId(), "排班");
+        requireValue(source.getDoctorId(), "医生");
+        requireValue(source.getDepartmentId(), "科室");
+        requireValue(source.getCampusId(), "院区");
+        requireValue(source.getDirectorId(), "科室主任");
     }
 
     /**
-     * 将多表实体转换为不含反向对象的详情平铺数据。
+     * 校验关键关联主键不为空。
      *
-     * @param appointment 挂号单
-     * @param patient 患者
-     * @param schedule 排班
-     * @param doctor 出诊医生
-     * @param department 科室
-     * @param campus 院区
-     * @param director 科室主任，不可为空
-     * @param medicalRecord 病历，可为空
-     * @return 详情平铺数据
+     * @param value 关联主键
+     * @param relationName 关联业务名称
      */
-    private AppointmentDetailVO toDetailSource(Appointment appointment, Patient patient, Schedule schedule,
-                                                Doctor doctor, Department department, Campus campus,
-                                                Doctor director, MedicalRecord medicalRecord) {
+    private void requireValue(Integer value, String relationName) {
+        if (value == null) {
+            throw dataIntegrityError("挂号单关联的" + relationName + "不存在");
+        }
+    }
+
+    /**
+     * 构造数据完整性错误。
+     *
+     * @param message 对外错误说明
+     * @return 数据完整性业务异常
+     */
+    private BusinessException dataIntegrityError(String message) {
+        return new BusinessException(HttpStatus.INTERNAL_SERVER_ERROR, "DATA_INTEGRITY_ERROR", message);
+    }
+
+    /**
+     * 将联合查询平铺结果组装为有限的详情响应树。
+     *
+     * @param source 联合查询结果
+     * @return 患者端挂号详情
+     */
+    private AppointmentDetailVO toDetailVO(AppointmentDetailSource source) {
         AppointmentDetailVO detail = new AppointmentDetailVO();
-        detail.setId(appointment.getId());
-        detail.setStatus(appointment.getStatus());
-
-        AppointmentDetailVO.PatientSummaryVO patientSummary = new AppointmentDetailVO.PatientSummaryVO();
-        patientSummary.setId(patient.getId());
-        patientSummary.setRealName(patient.getRealName());
-        detail.setPatient(patientSummary);
-
-        AppointmentDetailVO.CampusSummaryVO campusSummary = new AppointmentDetailVO.CampusSummaryVO();
-        campusSummary.setId(campus.getId());
-        campusSummary.setName(campus.getName());
-        campusSummary.setAddress(campus.getAddress());
-
-        DoctorSummaryVO directorSummary = new DoctorSummaryVO();
-        directorSummary.setId(director.getId());
-        directorSummary.setName(director.getName());
-        directorSummary.setTitle(director.getTitle());
-
-        AppointmentDetailVO.DepartmentDetailVO departmentDetail = new AppointmentDetailVO.DepartmentDetailVO();
-        departmentDetail.setId(department.getId());
-        departmentDetail.setName(department.getName());
-        departmentDetail.setCampus(campusSummary);
-        departmentDetail.setDirector(directorSummary);
-
-        AppointmentDetailVO.DoctorDetailVO doctorDetail = new AppointmentDetailVO.DoctorDetailVO();
-        doctorDetail.setId(doctor.getId());
-        doctorDetail.setName(doctor.getName());
-        doctorDetail.setTitle(doctor.getTitle());
-        doctorDetail.setDepartment(departmentDetail);
-
-        AppointmentDetailVO.ScheduleDetailVO scheduleDetail = new AppointmentDetailVO.ScheduleDetailVO();
-        scheduleDetail.setId(schedule.getId());
-        scheduleDetail.setWorkDate(schedule.getWorkDate().toInstant().atZone(ZoneId.systemDefault()).toLocalDate());
-        scheduleDetail.setTimeSlot(schedule.getTimeSlot());
-        scheduleDetail.setCapacity(schedule.getCapacity());
-        scheduleDetail.setDoctor(doctorDetail);
-        detail.setSchedule(scheduleDetail);
-
-        if (medicalRecord != null) {
-            AppointmentDetailVO.MedicalRecordDetailVO recordDetail = new AppointmentDetailVO.MedicalRecordDetailVO();
-            recordDetail.setId(medicalRecord.getId());
-            recordDetail.setDiagnosis(medicalRecord.getDiagnosis());
-            recordDetail.setPrescription(medicalRecord.getPrescription());
-            detail.setMedicalRecord(recordDetail);
-        }
+        detail.setId(source.getAppointmentId());
+        detail.setStatus(source.getAppointmentStatus());
+        detail.setPatient(toPatientSummary(source));
+        detail.setSchedule(toScheduleDetail(source));
+        detail.setMedicalRecord(toMedicalRecordDetail(source));
         return detail;
+    }
+
+    /**
+     * 组装患者摘要，不包含身份证号。
+     *
+     * @param source 联合查询结果
+     * @return 患者摘要
+     */
+    private AppointmentDetailVO.PatientSummaryVO toPatientSummary(AppointmentDetailSource source) {
+        AppointmentDetailVO.PatientSummaryVO patient = new AppointmentDetailVO.PatientSummaryVO();
+        patient.setId(source.getPatientId());
+        patient.setRealName(source.getPatientRealName());
+        return patient;
+    }
+
+    /**
+     * 组装排班及其出诊医生详情。
+     *
+     * @param source 联合查询结果
+     * @return 排班详情
+     */
+    private AppointmentDetailVO.ScheduleDetailVO toScheduleDetail(AppointmentDetailSource source) {
+        AppointmentDetailVO.ScheduleDetailVO schedule = new AppointmentDetailVO.ScheduleDetailVO();
+        schedule.setId(source.getScheduleId());
+        schedule.setWorkDate(source.getScheduleWorkDate());
+        schedule.setTimeSlot(source.getScheduleTimeSlot());
+        schedule.setCapacity(source.getScheduleCapacity());
+        schedule.setDoctor(toDoctorDetail(source));
+        return schedule;
+    }
+
+    /**
+     * 组装出诊医生及所属科室详情。
+     *
+     * @param source 联合查询结果
+     * @return 出诊医生详情
+     */
+    private AppointmentDetailVO.DoctorDetailVO toDoctorDetail(AppointmentDetailSource source) {
+        AppointmentDetailVO.DoctorDetailVO doctor = new AppointmentDetailVO.DoctorDetailVO();
+        doctor.setId(source.getDoctorId());
+        doctor.setName(source.getDoctorName());
+        doctor.setTitle(source.getDoctorTitle());
+        doctor.setDepartment(toDepartmentDetail(source));
+        return doctor;
+    }
+
+    /**
+     * 组装科室、院区和主任摘要。
+     *
+     * @param source 联合查询结果
+     * @return 科室详情
+     */
+    private AppointmentDetailVO.DepartmentDetailVO toDepartmentDetail(AppointmentDetailSource source) {
+        AppointmentDetailVO.DepartmentDetailVO department = new AppointmentDetailVO.DepartmentDetailVO();
+        department.setId(source.getDepartmentId());
+        department.setName(source.getDepartmentName());
+        department.setCampus(toCampusSummary(source));
+        department.setDirector(toDirectorSummary(source));
+        return department;
+    }
+
+    /**
+     * 组装院区摘要。
+     *
+     * @param source 联合查询结果
+     * @return 院区摘要
+     */
+    private AppointmentDetailVO.CampusSummaryVO toCampusSummary(AppointmentDetailSource source) {
+        AppointmentDetailVO.CampusSummaryVO campus = new AppointmentDetailVO.CampusSummaryVO();
+        campus.setId(source.getCampusId());
+        campus.setName(source.getCampusName());
+        campus.setAddress(source.getCampusAddress());
+        return campus;
+    }
+
+    /**
+     * 组装科室主任摘要；主任是详情链路中的必填关联。
+     *
+     * @param source 联合查询结果
+     * @return 科室主任摘要
+     */
+    private DoctorSummaryVO toDirectorSummary(AppointmentDetailSource source) {
+        DoctorSummaryVO director = new DoctorSummaryVO();
+        director.setId(source.getDirectorId());
+        director.setName(source.getDirectorName());
+        director.setTitle(source.getDirectorTitle());
+        return director;
+    }
+
+    /**
+     * 组装可选电子病历详情。
+     *
+     * @param source 联合查询结果
+     * @return 没有病历时返回 null
+     */
+    private AppointmentDetailVO.MedicalRecordDetailVO toMedicalRecordDetail(AppointmentDetailSource source) {
+        if (source.getMedicalRecordId() == null) {
+            return null;
+        }
+        AppointmentDetailVO.MedicalRecordDetailVO record = new AppointmentDetailVO.MedicalRecordDetailVO();
+        record.setId(source.getMedicalRecordId());
+        record.setDiagnosis(source.getMedicalRecordDiagnosis());
+        record.setPrescription(source.getMedicalRecordPrescription());
+        return record;
     }
 }
