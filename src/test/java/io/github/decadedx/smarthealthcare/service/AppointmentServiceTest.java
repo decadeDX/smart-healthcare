@@ -22,16 +22,16 @@ class AppointmentServiceTest {
     private AppointmentService appointmentService;
 
     /**
-     * 验证服务可组装初始化数据的完整详情平铺结果。
+     * 验证服务可组装初始化数据的完整无环详情树。
      */
     @Test
-    void shouldFindDetailSource() {
-        AppointmentDetailVO source = appointmentService.findDetailSource(1);
+    void shouldGetDetail() {
+        AppointmentDetailVO detail = appointmentService.getDetail(1);
 
-        assertNotNull(source);
-        assertEquals("张三", source.getPatientRealName());
-        assertEquals("钟南", source.getDoctorName());
-        assertEquals("呼吸内科", source.getDepartmentName());
-        assertEquals("本部院区", source.getCampusName());
+        assertNotNull(detail);
+        assertEquals("张三", detail.getPatient().getRealName());
+        assertEquals("钟南", detail.getSchedule().getDoctor().getName());
+        assertEquals("呼吸内科", detail.getSchedule().getDoctor().getDepartment().getName());
+        assertEquals("本部院区", detail.getSchedule().getDoctor().getDepartment().getCampus().getName());
     }
 }

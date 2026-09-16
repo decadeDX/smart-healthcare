@@ -1,79 +1,119 @@
 package io.github.decadedx.smarthealthcare.vo;
 
-import java.util.Date;
+import java.time.LocalDate;
 import lombok.Data;
 
 /**
- * 挂号单详情联合查询的平铺结果。
- *
- * <p>该对象仅承载 Mapper 查询结果，不携带任何反向关联，供后续服务层组装有限层级的接口 DTO。</p>
+ * 患者端挂号单详情的有限单向响应树，不含任何 Entity 或反向关联集合。
  */
 @Data
 public class AppointmentDetailVO {
 
     /** 挂号单主键。 */
-    private Integer appointmentId;
+    private Integer id;
 
     /** 挂号单当前状态。 */
-    private String appointmentStatus;
+    private String status;
 
-    /** 就诊患者主键。 */
-    private Integer patientId;
+    /** 挂号患者最小摘要。 */
+    private PatientSummaryVO patient;
 
-    /** 就诊患者实名。 */
-    private String patientRealName;
+    /** 排班、出诊医生和所属组织信息。 */
+    private ScheduleDetailVO schedule;
 
-    /** 排班主键。 */
-    private Integer scheduleId;
+    /** 可选电子病历；尚未产生病历时为 null。 */
+    private MedicalRecordDetailVO medicalRecord;
 
-    /** 排班出诊日期。 */
-    private Date scheduleWorkDate;
+    /** 挂号患者的最小展示信息。 */
+    @Data
+    public static class PatientSummaryVO {
 
-    /** 排班出诊时段。 */
-    private String scheduleTimeSlot;
+        /** 患者主键。 */
+        private Integer id;
 
-    /** 排班剩余号源数。 */
-    private Integer scheduleCapacity;
+        /** 患者真实姓名，不包含身份证号。 */
+        private String realName;
+    }
 
-    /** 出诊医生主键。 */
-    private Integer doctorId;
+    /** 挂号关联的排班详情。 */
+    @Data
+    public static class ScheduleDetailVO {
 
-    /** 出诊医生姓名。 */
-    private String doctorName;
+        /** 排班主键。 */
+        private Integer id;
 
-    /** 出诊医生职称。 */
-    private String doctorTitle;
+        /** 出诊日期。 */
+        private LocalDate workDate;
 
-    /** 医生所属科室主键。 */
-    private Integer departmentId;
+        /** 出诊时段。 */
+        private String timeSlot;
 
-    /** 医生所属科室名称。 */
-    private String departmentName;
+        /** 当前剩余可预约号源数。 */
+        private Integer capacity;
 
-    /** 科室所属院区主键。 */
-    private Integer campusId;
+        /** 出诊医生详情。 */
+        private DoctorDetailVO doctor;
+    }
 
-    /** 科室所属院区名称。 */
-    private String campusName;
+    /** 出诊医生及所属科室详情。 */
+    @Data
+    public static class DoctorDetailVO {
 
-    /** 科室所属院区详细地址。 */
-    private String campusAddress;
+        /** 医生主键。 */
+        private Integer id;
 
-    /** 科室主任主键，可为空。 */
-    private Integer directorId;
+        /** 医生姓名。 */
+        private String name;
 
-    /** 科室主任姓名，可为空。 */
-    private String directorName;
+        /** 医生职称。 */
+        private String title;
 
-    /** 科室主任职称，可为空。 */
-    private String directorTitle;
+        /** 所属科室详情。 */
+        private DepartmentDetailVO department;
+    }
 
-    /** 电子病历主键，可为空。 */
-    private Integer medicalRecordId;
+    /** 医生所属科室及院区、主任摘要。 */
+    @Data
+    public static class DepartmentDetailVO {
 
-    /** 电子病历诊断结果，可为空。 */
-    private String medicalRecordDiagnosis;
+        /** 科室主键。 */
+        private Integer id;
 
-    /** 电子病历处方信息，可为空。 */
-    private String medicalRecordPrescription;
+        /** 科室名称。 */
+        private String name;
+
+        /** 所属院区摘要。 */
+        private CampusSummaryVO campus;
+
+        /** 科室主任摘要。 */
+        private DoctorSummaryVO director;
+    }
+
+    /** 院区最小展示信息。 */
+    @Data
+    public static class CampusSummaryVO {
+
+        /** 院区主键。 */
+        private Integer id;
+
+        /** 院区名称。 */
+        private String name;
+
+        /** 院区地址。 */
+        private String address;
+    }
+
+    /** 电子病历详情。 */
+    @Data
+    public static class MedicalRecordDetailVO {
+
+        /** 病历主键。 */
+        private Integer id;
+
+        /** 诊断结果，可为空。 */
+        private String diagnosis;
+
+        /** 处方信息，可为空。 */
+        private String prescription;
+    }
 }

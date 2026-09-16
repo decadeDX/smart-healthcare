@@ -7,6 +7,8 @@ import io.github.decadedx.smarthealthcare.entity.Doctor;
 import io.github.decadedx.smarthealthcare.entity.MedicalRecord;
 import io.github.decadedx.smarthealthcare.entity.Patient;
 import io.github.decadedx.smarthealthcare.entity.Schedule;
+import io.github.decadedx.smarthealthcare.enums.AppointmentStatus;
+import io.github.decadedx.smarthealthcare.exception.BusinessException;
 import io.github.decadedx.smarthealthcare.mapper.AppointmentMapper;
 import io.github.decadedx.smarthealthcare.mapper.CampusMapper;
 import io.github.decadedx.smarthealthcare.mapper.DepartmentMapper;
@@ -18,7 +20,7 @@ import io.github.decadedx.smarthealthcare.vo.AppointmentDetailVO;
 import io.github.decadedx.smarthealthcare.service.AppointmentService;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.spring.service.impl.ServiceImpl;
-import java.util.Objects;
+import java.time.ZoneId;
 import org.springframework.stereotype.Service;
 
 /**
@@ -69,17 +71,23 @@ public class AppointmentServiceImpl extends ServiceImpl<AppointmentMapper, Appoi
     }
 
     /**
-     * 通过 MyBatis-Plus 主键查询逐级读取详情关联，并返回无反向关系的平铺数据。
+     * 查询挂号单及其必要关联数据，并组装不含反向关系的详情响应。
      *
      * @param appointmentId 挂号单主键
-     * @return 详情平铺数据；挂号单不存在时返回 {@code null}
+     * @return 挂号单详情
+     * @throws IllegalArgumentException 挂号单不存在时抛出
      * @throws IllegalStateException 关键关联数据缺失时抛出，避免组装错误详情
      */
     @Override
-    public AppointmentDetailVO findDetailSource(Integer appointmentId) {
+    public AppointmentDetailVO getDetail(Integer appointmentId) {
         Appointment appointment = getById(appointmentId);
         if (appointment == null) {
-            return null;
+            throw new BusinessException(org.springframework.http.HttpStatus.NOT_FOUND,
+                    "APPOINTMENT_NOT_FOUND", "挂号单不存在");
+        }
+        if (!AppointmentStatus.isSupported(appointment.getStatus())) {
+            throw new BusinessException(org.springframework.http.HttpStatus.INTERNAL_SERVER_ERROR,
+                    "DATA_INTEGRITY_ERROR", "挂号单状态数据不合法");
         }
 
         Patient patient = requireEntity(patientMapper.selectById(appointment.getPatientId()), "患者");
@@ -87,8 +95,9 @@ public class AppointmentServiceImpl extends ServiceImpl<AppointmentMapper, Appoi
         Doctor doctor = requireEntity(doctorMapper.selectById(schedule.getDoctorId()), "医生");
         Department department = requireEntity(departmentMapper.selectById(doctor.getDeptId()), "科室");
         Campus campus = requireEntity(campusMapper.selectById(department.getCampusId()), "院区");
-        Doctor director = department.getDirectorId() == null ? null
-            : doctorMapper.selectById(department.getDirectorId());
+        Doctor director = requireEntity(
+                department.getDirectorId() == null ? null : doctorMapper.selectById(department.getDirectorId()),
+                "科室主任");
         MedicalRecord medicalRecord = medicalRecordMapper.selectList(new LambdaQueryWrapper<MedicalRecord>()
                 .eq(MedicalRecord::getAppointmentId, appointmentId)
                 .orderByAsc(MedicalRecord::getId))
@@ -108,7 +117,11 @@ public class AppointmentServiceImpl extends ServiceImpl<AppointmentMapper, Appoi
      * @return 已确认非空的实体
      */
     private <T> T requireEntity(T entity, String entityName) {
-        return Objects.requireNonNull(entity, () -> "挂号单关联的" + entityName + "不存在");
+        if (entity == null) {
+            throw new BusinessException(org.springframework.http.HttpStatus.INTERNAL_SERVER_ERROR,
+                    "DATA_INTEGRITY_ERROR", "挂号单关联的" + entityName + "不存在");
+        }
+        return entity;
     }
 
     /**
@@ -127,37 +140,53 @@ public class AppointmentServiceImpl extends ServiceImpl<AppointmentMapper, Appoi
     private AppointmentDetailVO toDetailSource(Appointment appointment, Patient patient, Schedule schedule,
                                                 Doctor doctor, Department department, Campus campus,
                                                 Doctor director, MedicalRecord medicalRecord) {
-        AppointmentDetailVO source = new AppointmentDetailVO();
-        source.setAppointmentId(appointment.getId());
-        source.setAppointmentStatus(appointment.getStatus());
-        source.setPatientId(patient.getId());
-        source.setPatientRealName(patient.getRealName());
-        source.setScheduleId(schedule.getId());
-        source.setScheduleWorkDate(schedule.getWorkDate());
-        source.setScheduleTimeSlot(schedule.getTimeSlot());
-        source.setScheduleCapacity(schedule.getCapacity());
-        source.setDoctorId(doctor.getId());
-        source.setDoctorName(doctor.getName());
-        source.setDoctorTitle(doctor.getTitle());
-        source.setDepartmentId(department.getId());
-        source.setDepartmentName(department.getName());
-        source.setCampusId(campus.getId());
-        source.setCampusName(campus.getName());
-        source.setCampusAddress(campus.getAddress());
-        if (director != null) {
-            source.setDirectorId(director.getId());
-            source.setDirectorName(director.getName());
-            source.setDirectorTitle(director.getTitle());
-        }
+        AppointmentDetailVO detail = new AppointmentDetailVO();
+        detail.setId(appointment.getId());
+        detail.setStatus(appointment.getStatus());
+
+        AppointmentDetailVO.PatientSummaryVO patientSummary = new AppointmentDetailVO.PatientSummaryVO();
+        patientSummary.setId(patient.getId());
+        patientSummary.setRealName(patient.getRealName());
+        detail.setPatient(patientSummary);
+
+        AppointmentDetailVO.CampusSummaryVO campusSummary = new AppointmentDetailVO.CampusSummaryVO();
+        campusSummary.setId(campus.getId());
+        campusSummary.setName(campus.getName());
+        campusSummary.setAddress(campus.getAddress());
+
+        io.github.decadedx.smarthealthcare.vo.DoctorSummaryVO directorSummary =
+                new io.github.decadedx.smarthealthcare.vo.DoctorSummaryVO();
+        directorSummary.setId(director.getId());
+        directorSummary.setName(director.getName());
+        directorSummary.setTitle(director.getTitle());
+
+        AppointmentDetailVO.DepartmentDetailVO departmentDetail = new AppointmentDetailVO.DepartmentDetailVO();
+        departmentDetail.setId(department.getId());
+        departmentDetail.setName(department.getName());
+        departmentDetail.setCampus(campusSummary);
+        departmentDetail.setDirector(directorSummary);
+
+        AppointmentDetailVO.DoctorDetailVO doctorDetail = new AppointmentDetailVO.DoctorDetailVO();
+        doctorDetail.setId(doctor.getId());
+        doctorDetail.setName(doctor.getName());
+        doctorDetail.setTitle(doctor.getTitle());
+        doctorDetail.setDepartment(departmentDetail);
+
+        AppointmentDetailVO.ScheduleDetailVO scheduleDetail = new AppointmentDetailVO.ScheduleDetailVO();
+        scheduleDetail.setId(schedule.getId());
+        scheduleDetail.setWorkDate(schedule.getWorkDate().toInstant().atZone(ZoneId.systemDefault()).toLocalDate());
+        scheduleDetail.setTimeSlot(schedule.getTimeSlot());
+        scheduleDetail.setCapacity(schedule.getCapacity());
+        scheduleDetail.setDoctor(doctorDetail);
+        detail.setSchedule(scheduleDetail);
+
         if (medicalRecord != null) {
-            source.setMedicalRecordId(medicalRecord.getId());
-            source.setMedicalRecordDiagnosis(medicalRecord.getDiagnosis());
-            source.setMedicalRecordPrescription(medicalRecord.getPrescription());
+            AppointmentDetailVO.MedicalRecordDetailVO recordDetail = new AppointmentDetailVO.MedicalRecordDetailVO();
+            recordDetail.setId(medicalRecord.getId());
+            recordDetail.setDiagnosis(medicalRecord.getDiagnosis());
+            recordDetail.setPrescription(medicalRecord.getPrescription());
+            detail.setMedicalRecord(recordDetail);
         }
-        return source;
+        return detail;
     }
 }
-
-
-
-
