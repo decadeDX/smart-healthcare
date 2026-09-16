@@ -12,10 +12,10 @@ servers:
 tags:
   - name: 挂号单
     description: 患者挂号单详情查询
-  - name: 医生排班
-    description: 患者端医生排班和号源查询
   - name: 排班管理
     description: 院办后台排班余量调整
+  - name: 医生排班
+    description: 患者端医生排班和号源查询
 paths:
   /api/appointments/{appointmentId}:
     get:
