@@ -2,7 +2,7 @@
 
 ## 职责
 
-实现院办后台对排班余量的更新。UAT 所称“紧急停诊”在当前不允许改表的约束下，固定表示将 `schedule.capacity` 更新为 `0`。命令成功后必须立即使该医生的排班缓存失效。Controller 使用 `ScheduleCapacityUpdateDTO` 接收并通过 `@Valid` 校验请求，调用 Service 后返回 `Result<ScheduleSummaryVO>`；事务、Redis 和业务异常处理遵循 [backend-conventions.md](backend-conventions.md)。
+实现院办后台对排班余量的更新。UAT 所称“紧急停诊”在当前不允许改表的约束下，固定表示将 `schedule.capacity` 更新为 `0`。命令成功后必须立即使该医生的排班缓存失效。Controller 使用 `ScheduleCapacityUpdateDTO` 接收并通过 `@Valid` 校验请求，调用 Service 后返回 `Result<ScheduleCapacityUpdateVO>`；事务、Redis 和业务异常处理遵循 [backend-conventions.md](backend-conventions.md)。
 
 ## 接口契约
 
@@ -16,7 +16,7 @@
 
 `ScheduleCapacityUpdateDTO.capacity` 必须使用 Bean Validation 声明非空、整数及非负约束；排班是否存在、缓存协调和失效结果属于 Service 的业务校验，不放在 Controller 或 Mapper。
 
-成功响应的 `Result<ScheduleSummaryVO>.data` 建议返回更新后的最小快照：
+成功响应的 `Result<ScheduleCapacityUpdateVO>.data` 建议返回更新后的最小快照：
 
 ```json
 { "id": 1, "doctorId": 1, "workDate": "2023-12-01", "timeSlot": "上午", "capacity": 0 }

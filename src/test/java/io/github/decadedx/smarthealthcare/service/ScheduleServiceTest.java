@@ -1,7 +1,7 @@
 package io.github.decadedx.smarthealthcare.service;
 
-import io.github.decadedx.smarthealthcare.entity.Schedule;
 import io.github.decadedx.smarthealthcare.vo.DoctorScheduleItemVO;
+import io.github.decadedx.smarthealthcare.vo.DoctorScheduleVO;
 import java.util.List;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -39,13 +39,14 @@ class ScheduleServiceTest {
     }
 
     /**
-     * 验证更新前可取得医生主键，并以原余量回写避免污染初始化数据。
+     * 验证患者端排班查询在缓存不可用时仍可回源数据库返回完整快照。
      */
     @Test
-    void shouldUpdateCapacityAndReturnDoctorId() {
-        Schedule schedule = scheduleService.getById(1);
+    void shouldGetDoctorSchedules() {
+        DoctorScheduleVO response = scheduleService.getDoctorSchedules(1);
 
-        assertNotNull(schedule);
-        assertEquals(1, scheduleService.updateCapacity(1, schedule.getCapacity()));
+        assertNotNull(response);
+        assertEquals("钟南", response.getDoctor().getName());
+        assertFalse(response.getSchedules().isEmpty());
     }
 }
