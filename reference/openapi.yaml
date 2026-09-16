@@ -5,7 +5,8 @@ info:
   description: |
     本规范覆盖本期的挂号详情查询、医生排班查询和院办排班余量调整接口。
     所有响应均使用 Result<T> 包装：成功时 data 为业务 VO，失败时 data 为 null 并包含 traceId。
-    认证协议、令牌格式和具体错误码枚举尚未确定，未在本规范中虚构 security scheme 或错误码值。
+    认证协议与令牌格式尚未确定，未在本规范中虚构 security scheme。
+    所有响应的 code 为整数，且与实际 HTTP 状态码一致。
 servers:
   - url: http://localhost:8080
     description: 本地开发环境
@@ -35,7 +36,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/AppointmentDetailResult'
               example:
-                code: SUCCESS_CODE_TBD
+                code: 200
                 message: success
                 data:
                   id: 1
@@ -91,7 +92,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/DoctorScheduleResult'
               example:
-                code: SUCCESS_CODE_TBD
+                code: 200
                 message: success
                 data:
                   doctor:
@@ -135,7 +136,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/ScheduleCapacityUpdateResult'
               example:
-                code: SUCCESS_CODE_TBD
+                code: 200
                 message: success
                 data:
                   id: 1
@@ -229,8 +230,9 @@ components:
       required: [code, message, data]
       properties:
         code:
-          type: string
-          description: 项目统一成功码；具体值待统一错误码注册表确定。
+          type: integer
+          format: int32
+          description: 与 HTTP 状态码一致的数字状态码；成功时固定为 200。
         message:
           type: string
           example: success
@@ -241,8 +243,9 @@ components:
       required: [code, message, data]
       properties:
         code:
-          type: string
-          description: 项目统一成功码；具体值待统一错误码注册表确定。
+          type: integer
+          format: int32
+          description: 与 HTTP 状态码一致的数字状态码；成功时固定为 200。
         message:
           type: string
           example: success
@@ -253,8 +256,9 @@ components:
       required: [code, message, data]
       properties:
         code:
-          type: string
-          description: 项目统一成功码；具体值待统一错误码注册表确定。
+          type: integer
+          format: int32
+          description: 与 HTTP 状态码一致的数字状态码；成功时固定为 200。
         message:
           type: string
           example: success
@@ -265,8 +269,9 @@ components:
       required: [code, message, data, traceId]
       properties:
         code:
-          type: string
-          description: 项目统一错误码；具体值待统一错误码注册表确定。
+          type: integer
+          format: int32
+          description: 与 HTTP 状态码一致的数字状态码，如 400、404、500 或 503。
         message:
           type: string
           description: 面向调用方的错误说明，不得包含内部实现或敏感信息。
@@ -278,7 +283,7 @@ components:
           type: string
           description: 请求链路追踪标识。
       example:
-        code: ERROR_CODE_TBD
+        code: 500
         message: 请求处理失败
         data: null
         traceId: 6d486c3d7e8c4c5a
