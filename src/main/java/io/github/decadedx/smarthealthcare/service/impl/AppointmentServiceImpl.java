@@ -21,6 +21,8 @@ import io.github.decadedx.smarthealthcare.service.AppointmentService;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.spring.service.impl.ServiceImpl;
 import java.time.ZoneId;
+
+import io.github.decadedx.smarthealthcare.vo.DoctorSummaryVO;
 import org.springframework.stereotype.Service;
 
 /**
@@ -75,8 +77,7 @@ public class AppointmentServiceImpl extends ServiceImpl<AppointmentMapper, Appoi
      *
      * @param appointmentId 挂号单主键
      * @return 挂号单详情
-     * @throws IllegalArgumentException 挂号单不存在时抛出
-     * @throws IllegalStateException 关键关联数据缺失时抛出，避免组装错误详情
+     * @throws BusinessException 挂号单不存在、状态非法或关键关联（含科室主任）缺失时抛出
      */
     @Override
     public AppointmentDetailVO getDetail(Integer appointmentId) {
@@ -133,7 +134,7 @@ public class AppointmentServiceImpl extends ServiceImpl<AppointmentMapper, Appoi
      * @param doctor 出诊医生
      * @param department 科室
      * @param campus 院区
-     * @param director 科室主任，可为空
+     * @param director 科室主任，不可为空
      * @param medicalRecord 病历，可为空
      * @return 详情平铺数据
      */
@@ -154,8 +155,7 @@ public class AppointmentServiceImpl extends ServiceImpl<AppointmentMapper, Appoi
         campusSummary.setName(campus.getName());
         campusSummary.setAddress(campus.getAddress());
 
-        io.github.decadedx.smarthealthcare.vo.DoctorSummaryVO directorSummary =
-                new io.github.decadedx.smarthealthcare.vo.DoctorSummaryVO();
+        DoctorSummaryVO directorSummary = new DoctorSummaryVO();
         directorSummary.setId(director.getId());
         directorSummary.setName(director.getName());
         directorSummary.setTitle(director.getTitle());

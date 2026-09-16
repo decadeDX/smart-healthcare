@@ -163,7 +163,7 @@ GET /api/appointments/1
 | --- | --- |
 | `400 Bad Request` | `appointmentId` 非正整数或格式非法；不得查询数据库 |
 | `404 Not Found` | 挂号单不存在 |
-| `500 Internal Server Error` | 患者、排班、医生、科室或院区等关键关联数据缺失；服务端记录关联 ID 和告警 |
+| `500 Internal Server Error` | 患者、排班、医生、科室、院区或科室主任等关键关联数据缺失；服务端记录关联 ID 和告警 |
 
 病历不存在不是异常，仍返回 `200`，并令 `medicalRecord` 为 `null`。
 
