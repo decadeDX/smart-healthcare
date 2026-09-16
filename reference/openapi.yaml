@@ -8,7 +8,7 @@ info:
     认证协议、令牌格式和具体错误码枚举尚未确定，未在本规范中虚构 security scheme 或错误码值。
 servers:
   - url: http://localhost:8080
-    description: 本地开发环境（请按实际部署地址配置 Apifox 环境）
+    description: 本地开发环境
 tags:
   - name: 挂号单
     description: 患者挂号单详情查询
