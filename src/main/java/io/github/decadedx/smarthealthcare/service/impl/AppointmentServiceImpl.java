@@ -30,11 +30,10 @@ public class AppointmentServiceImpl extends ServiceImpl<AppointmentMapper, Appoi
     public AppointmentDetailVO getDetail(Integer appointmentId) {
         List<AppointmentDetailSource> sources = baseMapper.findAppointmentDetailSource(appointmentId);
         if (sources.isEmpty()) {
-            throw new BusinessException(HttpStatus.NOT_FOUND, "APPOINTMENT_NOT_FOUND", "挂号单不存在");
+            throw new BusinessException(HttpStatus.NOT_FOUND, "挂号单不存在");
         }
         if (sources.size() > 1) {
-            throw new BusinessException(HttpStatus.INTERNAL_SERVER_ERROR,
-                    "DATA_INTEGRITY_ERROR", "同一挂号单存在多条病历");
+            throw new BusinessException(HttpStatus.INTERNAL_SERVER_ERROR, "同一挂号单存在多条病历");
         }
 
         AppointmentDetailSource source = sources.get(0);
@@ -78,7 +77,7 @@ public class AppointmentServiceImpl extends ServiceImpl<AppointmentMapper, Appoi
      * @return 数据完整性业务异常
      */
     private BusinessException dataIntegrityError(String message) {
-        return new BusinessException(HttpStatus.INTERNAL_SERVER_ERROR, "DATA_INTEGRITY_ERROR", message);
+        return new BusinessException(HttpStatus.INTERNAL_SERVER_ERROR, message);
     }
 
     /**

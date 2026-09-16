@@ -61,7 +61,7 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(Exception.class)
     public ResponseEntity<Result<Void>> handleUnexpectedException(Exception exception) {
         return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                .body(Result.error("INTERNAL_ERROR", "服务处理失败", traceId()));
+                .body(Result.error(HttpStatus.INTERNAL_SERVER_ERROR.value(), "服务处理失败", traceId()));
     }
 
     /**
@@ -71,7 +71,7 @@ public class GlobalExceptionHandler {
      * @return 400 统一错误响应
      */
     private ResponseEntity<Result<Void>> badRequest(String message) {
-        return ResponseEntity.badRequest().body(Result.error("INVALID_PARAMETER", message, traceId()));
+        return ResponseEntity.badRequest().body(Result.error(HttpStatus.BAD_REQUEST.value(), message, traceId()));
     }
 
     /**

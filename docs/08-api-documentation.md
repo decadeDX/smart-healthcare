@@ -32,13 +32,13 @@
 
 ### 2.2 统一响应结构
 
-所有 Controller API 均返回统一 `Result<T>` 结构。成功时 `data` 为对应 VO；失败时 `data` 为 `null` 并携带 `traceId`。`code` 的具体枚举值由项目统一错误码注册表确定；本文档不虚构未定义的编码值。
+所有 Controller API 均返回统一 `Result<T>` 结构。成功时 `data` 为对应 VO；失败时 `data` 为 `null` 并携带 `traceId`。`code` 为整数，且始终与 HTTP 状态码一致。
 
 成功响应示例：
 
 ```json
 {
-  "code": "<项目统一成功码>",
+  "code": 200,
   "message": "success",
   "data": { "<对应接口 VO 字段>": "..." }
 }
@@ -48,7 +48,7 @@
 
 ```json
 {
-  "code": "<项目统一错误码>",
+  "code": 500,
   "message": "面向调用方的错误说明",
   "data": null,
   "traceId": "请求链路追踪标识"

@@ -150,17 +150,16 @@ public class ScheduleServiceImpl extends ServiceImpl<ScheduleMapper, Schedule> i
     @Override
     public ScheduleCapacityUpdateVO updateCapacityAndGetSnapshot(Integer scheduleId, Integer capacity) {
         if (capacity == null || capacity < 0) {
-            throw new BusinessException(HttpStatus.BAD_REQUEST, "INVALID_PARAMETER", "排班余量必须为非负整数");
+            throw new BusinessException(HttpStatus.BAD_REQUEST, "排班余量必须为非负整数");
         }
         Schedule schedule = getById(scheduleId);
         if (schedule == null) {
-            throw new BusinessException(HttpStatus.NOT_FOUND, "SCHEDULE_NOT_FOUND", "排班不存在");
+            throw new BusinessException(HttpStatus.NOT_FOUND, "排班不存在");
         }
         try {
             return withDoctorLock(schedule.getDoctorId(), () -> updateAndEvict(scheduleId, capacity));
         } catch (DataAccessException exception) {
-            throw new BusinessException(HttpStatus.SERVICE_UNAVAILABLE, "CACHE_UNAVAILABLE",
-                    "排班更新后的缓存失效未完成，请稍后重试");
+            throw new BusinessException(HttpStatus.SERVICE_UNAVAILABLE, "排班更新后的缓存失效未完成，请稍后重试");
         }
     }
 
@@ -175,11 +174,11 @@ public class ScheduleServiceImpl extends ServiceImpl<ScheduleMapper, Schedule> i
         ScheduleCapacityUpdateVO updated = Objects.requireNonNull(transactionTemplate.execute(status -> {
             Schedule current = getById(scheduleId);
             if (current == null) {
-                throw new BusinessException(HttpStatus.NOT_FOUND, "SCHEDULE_NOT_FOUND", "排班不存在");
+                throw new BusinessException(HttpStatus.NOT_FOUND, "排班不存在");
             }
             current.setCapacity(capacity);
             if (!updateById(current)) {
-                throw new BusinessException(HttpStatus.INTERNAL_SERVER_ERROR, "DATABASE_UPDATE_FAILED", "排班余量更新失败");
+                throw new BusinessException(HttpStatus.INTERNAL_SERVER_ERROR, "排班余量更新失败");
             }
             return toCapacityUpdateVO(current);
         }));
@@ -196,7 +195,7 @@ public class ScheduleServiceImpl extends ServiceImpl<ScheduleMapper, Schedule> i
     private DoctorScheduleVO loadDoctorSchedules(Integer doctorId) {
         Doctor doctor = doctorMapper.selectById(doctorId);
         if (doctor == null) {
-            throw new BusinessException(HttpStatus.NOT_FOUND, "DOCTOR_NOT_FOUND", "医生不存在");
+            throw new BusinessException(HttpStatus.NOT_FOUND, "医生不存在");
         }
         DoctorScheduleVO response = new DoctorScheduleVO();
         response.setDoctor(toDoctorSummary(doctor));
@@ -272,8 +271,7 @@ public class ScheduleServiceImpl extends ServiceImpl<ScheduleMapper, Schedule> i
                 break;
             }
         }
-        throw new BusinessException(HttpStatus.SERVICE_UNAVAILABLE, "CACHE_COORDINATION_FAILED",
-                "排班缓存正在重建，请稍后重试");
+        throw new BusinessException(HttpStatus.SERVICE_UNAVAILABLE, "排班缓存正在重建，请稍后重试");
     }
 
     /**

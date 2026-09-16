@@ -6,14 +6,14 @@
 
 ```json
 {
-  "code": "<项目统一错误码>",
+  "code": 500,
   "message": "面向调用方的错误说明",
   "data": null,
   "traceId": "请求链路追踪标识"
 }
 ```
 
-`code` 的具体值由项目统一错误码注册表确定；当前需求未定义具体枚举，故本表仅规定 HTTP 语义，不虚构错误码。
+`code` 为整数，且与实际 HTTP 状态码完全一致；例如 `404 Not Found` 响应的 `code` 为 `404`。
 
 ## 2. 状态码总表
 
@@ -56,7 +56,7 @@
 
 ```json
 {
-  "code": "<项目统一参数错误码>",
+  "code": 400,
   "message": "capacity 必须为非负整数",
   "data": null,
   "traceId": "6d486c3d7e8c4c5a"
@@ -67,7 +67,7 @@
 
 ```json
 {
-  "code": "<项目统一资源不存在错误码>",
+  "code": 404,
   "message": "排班不存在",
   "data": null,
   "traceId": "6d486c3d7e8c4c5b"
@@ -78,7 +78,7 @@
 
 ```json
 {
-  "code": "<项目统一服务不可用错误码>",
+  "code": 503,
   "message": "排班更新后的缓存失效未完成，请稍后重试",
   "data": null,
   "traceId": "6d486c3d7e8c4c5c"

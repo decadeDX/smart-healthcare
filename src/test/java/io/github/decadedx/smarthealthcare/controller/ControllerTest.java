@@ -31,7 +31,7 @@ class ControllerTest {
 
         Result<AppointmentDetailVO> result = new AppointmentController(appointmentService).getDetail(1);
 
-        assertEquals("SUCCESS", result.code());
+        assertEquals(200, result.code());
         assertEquals(detail, result.data());
         verify(appointmentService).getDetail(1);
     }
@@ -47,7 +47,7 @@ class ControllerTest {
 
         Result<DoctorScheduleVO> result = new DoctorController(scheduleService).getSchedules(1);
 
-        assertEquals("SUCCESS", result.code());
+        assertEquals(200, result.code());
         assertEquals(schedules, result.data());
         verify(scheduleService).getDoctorSchedules(1);
     }
@@ -68,7 +68,7 @@ class ControllerTest {
         Result<ScheduleCapacityUpdateVO> result = new ScheduleController(scheduleService)
             .updateCapacity(1, request);
 
-        assertEquals("SUCCESS", result.code());
+        assertEquals(200, result.code());
         assertEquals(updated, result.data());
         verify(scheduleService).updateCapacityAndGetSnapshot(1, 0);
     }

@@ -1,5 +1,6 @@
 package io.github.decadedx.smarthealthcare.exception;
 
+import lombok.Getter;
 import org.springframework.http.HttpStatus;
 
 /**
@@ -7,40 +8,32 @@ import org.springframework.http.HttpStatus;
  */
 public class BusinessException extends RuntimeException {
 
-    /** 对应 HTTP 状态。 */
+    /** 对应 HTTP 状态。
+     * -- GETTER --
+     *  获取对应 HTTP 状态。
+     *
+     * @return HTTP 状态
+     */
+    @Getter
     private final HttpStatus status;
-
-    /** 项目统一错误码；具体编码由后续错误码注册表收敛。 */
-    private final String code;
 
     /**
      * 创建业务异常。
      *
      * @param status 对应 HTTP 状态
-     * @param code 对外错误码
      * @param message 对外错误消息
      */
-    public BusinessException(HttpStatus status, String code, String message) {
+    public BusinessException(HttpStatus status, String message) {
         super(message);
         this.status = status;
-        this.code = code;
     }
 
     /**
-     * 获取对应 HTTP 状态。
+     * 获取与 HTTP 状态一致的对外数字错误码。
      *
-     * @return HTTP 状态
+     * @return HTTP 数字状态码
      */
-    public HttpStatus getStatus() {
-        return status;
-    }
-
-    /**
-     * 获取对外错误码。
-     *
-     * @return 项目统一错误码
-     */
-    public String getCode() {
-        return code;
+    public int getCode() {
+        return status.value();
     }
 }
