@@ -129,6 +129,13 @@ namespace VO {
     +String timeSlot
     +Integer capacity
   }
+  class ScheduleCapacityUpdateVO {
+    +Integer id
+    +Integer doctorId
+    +LocalDate workDate
+    +String timeSlot
+    +Integer capacity
+  }
 }
 
 namespace Application {
@@ -139,7 +146,7 @@ namespace Application {
     +getSchedules(doctorId) Result~DoctorScheduleVO~
   }
   class AdminScheduleController {
-    +updateCapacity(scheduleId, request) Result~ScheduleSummaryVO~
+    +updateCapacity(scheduleId, request) Result~ScheduleCapacityUpdateVO~
   }
   class AppointmentService {
     <<interface>>
@@ -151,7 +158,7 @@ namespace Application {
   }
   class ScheduleService {
     <<interface>>
-    +updateCapacity(scheduleId, capacity) ScheduleSummaryVO
+    +updateCapacity(scheduleId, capacity) ScheduleCapacityUpdateVO
   }
   class HospitalMapper {
     <<interface>>
@@ -217,4 +224,4 @@ RedisDoctorScheduleCache ..|> DoctorScheduleCache
 | --- | --- | --- | --- |
 | `GET /api/appointments/{id}` | `AppointmentController` | `AppointmentService` | `Result<AppointmentDetailVO>` | 本期不缓存 |
 | `GET /api/doctors/{id}/schedules` | `DoctorScheduleController` | `DoctorScheduleService` | `Result<DoctorScheduleVO>` | Cache-Aside，Redis JSON |
-| `PATCH /api/admin/schedules/{id}/capacity` | `AdminScheduleController` | `ScheduleService` | `Result<ScheduleSummaryVO>` | 提交后精准删除医生键 |
+| `PATCH /api/admin/schedules/{id}/capacity` | `AdminScheduleController` | `ScheduleService` | `Result<ScheduleCapacityUpdateVO>` | 提交后精准删除医生键 |

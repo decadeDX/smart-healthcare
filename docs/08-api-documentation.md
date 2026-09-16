@@ -63,7 +63,7 @@
 | --- | --- | --- | --- | --- |
 | API-01 | 查询挂号单全链路详情 | `GET /api/appointments/{appointmentId}` | 患者本人/院办后台 | `200`，`Result<AppointmentDetailVO>` |
 | API-02 | 查询医生排班号源 | `GET /api/doctors/{doctorId}/schedules` | 患者端 | `200`，`Result<DoctorScheduleVO>` |
-| API-03 | 调整排班余量/紧急停诊 | `PATCH /api/admin/schedules/{scheduleId}/capacity` | 院办后台 | `200`，`Result<ScheduleSummaryVO>` |
+| API-03 | 调整排班余量/紧急停诊 | `PATCH /api/admin/schedules/{scheduleId}/capacity` | 院办后台 | `200`，`Result<ScheduleCapacityUpdateVO>` |
 
 ## 4. API-01：查询挂号单全链路详情
 
@@ -264,7 +264,7 @@ Accept: application/json
 
 ### 成功响应
 
-状态码：`200 OK`。以下为 `Result<ScheduleSummaryVO>.data`：
+状态码：`200 OK`。以下为 `Result<ScheduleCapacityUpdateVO>.data`：
 
 ```json
 {
