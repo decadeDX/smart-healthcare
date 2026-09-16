@@ -22,7 +22,7 @@
 | 6 | [06-api-and-uat.md](06-api-and-uat.md) | API 契约、测试及验收 | 所有 UAT 关卡可自动/手工复核 |
 | 7 | [08-api-documentation.md](08-api-documentation.md) | 对外接口文档 | 前后端可按请求、响应、错误及缓存语义联调 |
 | 8 | [09-http-status-code-mapping.md](09-http-status-code-mapping.md) | HTTP 状态码对照表 | 明确各接口成功和失败状态的 HTTP 语义 |
-| 9 | [openapi.yaml](openapi.yaml) | OpenAPI 3.0.3 规范 | 可直接导入 Apifox Spec 项目，并作为接口定义源文件 |
+| 9 | [openapi.yaml](../reference/openapi.yaml) | OpenAPI 3.0.3 规范 | 可直接导入 Apifox Spec 项目，并作为接口定义源文件 |
 | 附录 | [07-overall-uml-class-diagram.md](07-overall-uml-class-diagram.md) | 总体 UML 类图 | 明确实体关系、DTO 防环边界和服务协作 |
 
 ## 关键业务对象
