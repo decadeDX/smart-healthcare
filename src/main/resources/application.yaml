@@ -1,0 +1,25 @@
+spring:
+  application:
+    name: smart-healthcare
+
+  datasource:
+    url: ${DB_URL:jdbc:mysql://localhost:3306/hospital_sys?useUnicode=true&characterEncoding=utf8&serverTimezone=Asia/Shanghai}
+    username: ${DB_USERNAME:root}
+    password: ${DB_PASSWORD:}
+    driver-class-name: com.mysql.cj.jdbc.Driver
+
+  data:
+    redis:
+      host: ${REDIS_HOST:localhost}
+      port: ${REDIS_PORT:6379}
+      database: ${REDIS_DATABASE:0}
+      connect-timeout: 3s
+      timeout: 3s
+
+mybatis-plus:
+  type-aliases-package: io.github.decadedx.smarthealthcare.entity
+  configuration:
+    map-underscore-to-camel-case: true
+  global-config:
+    db-config:
+      id-type: auto
