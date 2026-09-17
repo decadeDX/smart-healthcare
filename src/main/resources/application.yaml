@@ -2,10 +2,16 @@ spring:
   application:
     name: smart-healthcare
 
+  security:
+    user:
+      name: ${HOSPITAL_ADMIN_USERNAME}
+      password: ${HOSPITAL_ADMIN_PASSWORD}
+      roles: HOSPITAL_ADMIN
+
   datasource:
     url: ${DB_URL:jdbc:mysql://localhost:3306/hospital_sys?useUnicode=true&characterEncoding=utf8&serverTimezone=Asia/Shanghai}
-    username: ${DB_USERNAME:root}
-    password: ${DB_PASSWORD:Dx20021221}
+    username: ${DB_USERNAME}
+    password: ${DB_PASSWORD}
     driver-class-name: com.mysql.cj.jdbc.Driver
 
   data:

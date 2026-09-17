@@ -40,6 +40,7 @@ public class ScheduleController {
      * @param request 余量更新请求
      * @return 更新后的排班最小快照
      */
+
     @PatchMapping("/{scheduleId}/capacity")
     public Result<ScheduleCapacityUpdateVO> updateCapacity(
             @PathVariable @Positive Integer scheduleId,

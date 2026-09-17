@@ -19,6 +19,8 @@ import java.util.List;
 import java.util.Objects;
 import java.util.UUID;
 import java.util.function.Supplier;
+
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.dao.DataAccessException;
 import org.springframework.data.redis.core.StringRedisTemplate;
@@ -32,6 +34,7 @@ import tools.jackson.databind.ObjectMapper;
 /**
  * 负责医生排班的缓存查询及容量变更，并保证变更提交后精准失效医生维度缓存。
  */
+@Slf4j
 @Service
 public class ScheduleServiceImpl extends ServiceImpl<ScheduleMapper, Schedule> implements ScheduleService {
 
@@ -182,7 +185,7 @@ public class ScheduleServiceImpl extends ServiceImpl<ScheduleMapper, Schedule> i
             }
             return toCapacityUpdateVO(current);
         }));
-        evictCached(updated.getDoctorId());
+        evictCachedOrThrow(updated.getDoctorId(), scheduleId);
         return updated;
     }
 
@@ -238,13 +241,41 @@ public class ScheduleServiceImpl extends ServiceImpl<ScheduleMapper, Schedule> i
 
     /**
      * 删除指定医生的排班缓存；键不存在视为已完成失效。
+     * 删除失败时最多重试三次，最终失败则拒绝向调用方宣告更新成功。
      *
      * @param doctorId 医生主键
+     * @param scheduleId 被更新的排班主键，用于审计日志
      */
-    private void evictCached(Integer doctorId) {
-        redisTemplate.delete(cacheKey(doctorId));
-    }
+    private void evictCachedOrThrow(Integer doctorId, Integer scheduleId) {
+        DataAccessException lastException = null;
 
+        for (int attempt = 1; attempt <= 3; attempt++) {
+            try {
+                redisTemplate.delete(cacheKey(doctorId));
+                return;
+            } catch (DataAccessException exception) {
+                lastException = exception;
+                log.warn("排班缓存失效失败，scheduleId={}, doctorId={}, attempt={}",
+                        scheduleId, doctorId, attempt, exception);
+
+                if (attempt < 3) {
+                    try {
+                        Thread.sleep(100L * attempt);
+                    } catch (InterruptedException interruptedException) {
+                        Thread.currentThread().interrupt();
+                        log.warn("排班缓存失效重试被中断，scheduleId={}, doctorId={}",
+                                scheduleId, doctorId, interruptedException);
+                        break;
+                    }
+                }
+            }
+        }
+
+        log.error("排班缓存失效最终失败，scheduleId={}, doctorId={}",
+                scheduleId, doctorId, lastException);
+        throw new BusinessException(HttpStatus.SERVICE_UNAVAILABLE,
+                "排班已更新，但缓存失效未完成，请稍后重试");
+    }
     /**
      * 以医生维度短租约协调缓存重建和排班写入，避免并发回源或旧快照回填。
      *
