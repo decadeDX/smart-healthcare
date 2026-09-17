@@ -5,7 +5,7 @@ info:
   description: |
     本规范覆盖本期的挂号详情查询、医生排班查询和院办排班余量调整接口。
     所有响应均使用 Result<T> 包装：成功时 data 为业务 VO，失败时 data 为 null 并包含 traceId。
-    认证协议与令牌格式尚未确定，未在本规范中虚构 security scheme。
+    患者端查询接口无需认证；院办后台排班调整接口使用 HTTP Basic 认证，且账号必须具有 HOSPITAL_ADMIN 角色。
     所有响应的 code 为整数，且与实际 HTTP 状态码一致。
 servers:
   - url: http://localhost:8080
@@ -23,9 +23,9 @@ paths:
       tags: [挂号单]
       summary: 查询挂号单全链路详情
       description: |
-        仅允许挂号患者本人或院办后台访问。鉴权机制待接入。
         响应为从挂号单向下展开的有限 VO 树，不包含 appointments、schedules、departments 等反向集合字段。
       operationId: getAppointmentDetail
+      security: []
       parameters:
         - $ref: '#/components/parameters/AppointmentId'
       responses:
@@ -82,6 +82,7 @@ paths:
         返回医生摘要和按 workDate ASC、timeSlot ASC、id ASC 排序的排班列表。
         缓存命中时不访问数据库；缓存值为 DoctorScheduleVO 的可读 JSON 数据，不包含 Result 外层包装。
       operationId: getDoctorSchedules
+      security: []
       parameters:
         - $ref: '#/components/parameters/DoctorId'
       responses:
@@ -115,9 +116,11 @@ paths:
       tags: [排班管理]
       summary: 调整排班余量或执行紧急停诊
       description: |
-        仅允许院办后台访问，认证与角色编码待接入。
+        仅允许具备 HOSPITAL_ADMIN 角色的院办后台账号访问，使用 HTTP Basic 认证。
         当前表结构没有独立排班状态；传入 capacity: 0 表示紧急停诊。数据库事务提交成功后，必须成功删除对应 doctorId 的排班缓存，接口才可返回 200。
       operationId: updateScheduleCapacity
+      security:
+        - BasicAuth: []
       parameters:
         - $ref: '#/components/parameters/ScheduleId'
       requestBody:
@@ -146,6 +149,10 @@ paths:
                   capacity: 0
         '400':
           $ref: '#/components/responses/InvalidParameter'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
         '404':
           $ref: '#/components/responses/ScheduleNotFound'
         '500':
@@ -153,6 +160,11 @@ paths:
         '503':
           $ref: '#/components/responses/CacheUnavailable'
 components:
+  securitySchemes:
+    BasicAuth:
+      type: http
+      scheme: basic
+      description: 使用 HOSPITAL_ADMIN 账号的用户名和密码认证。
   parameters:
     AppointmentId:
       name: appointmentId
@@ -182,6 +194,10 @@ components:
         format: int32
         minimum: 1
   responses:
+    Unauthorized:
+      description: 未提供或提供了无效的 HTTP Basic 认证信息。
+    Forbidden:
+      description: 已认证账号不具备 HOSPITAL_ADMIN 角色。
     InvalidParameter:
       description: 路径 ID 非法，或 capacity 缺失、非整数或为负数。
       content:
